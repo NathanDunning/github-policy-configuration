@@ -1,0 +1,62 @@
+name: apply-branch-policies
+
+on:
+  workflow_dispatch:
+    inputs:
+      organization_name:
+        description: 'Name of your organization where repositories are located'
+        required: true
+        type: string
+      repositories:
+        description: 'List of repositories names specified as an array'
+        required: true 
+        type: string 
+        default: '["repo1", "repo2"]'
+      branch_name:
+        description: 'Name of the branch to apply policy to'
+        required: true 
+        type: string
+        default: main
+      minimum_pr_approvers_required:
+        description: 'Minimum number of pull request approvers required'
+        type: number
+        required: true
+        default: 1
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  apply-policies:
+    name: Apply Branch Policies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+        env:
+          TF_VAR_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          TF_VAR_organization_name: ${{ inputs.organization_name }} 
+          TF_VAR_repositories: ${{ inputs.repositories }}
+          TF_VAR_branch_name: ${{ inputs.branch_name }}
+          TF_VAR_minimum_reviewers_required: ${{ inputs.minimum_pr_approvers_required }}
+
+      - name: Examine Terraform Plan
+        id: exaine
+        run: sleep 60
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply tfplan
+
+
